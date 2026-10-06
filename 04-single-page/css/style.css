@@ -1,0 +1,328 @@
+/* ============================================================
+   polroig4 — single-page, scroll vertical
+   Sense roda ni mirilla. Capçalera amb switch d'idioma a
+   l'esquerra i braille a la dreta. Llista vertical de projectes
+   i totes les seccions renderitzades en seqüència.
+   ============================================================ */
+
+/* -------------------- 0. Reset mínim --------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+img        { display: block; max-width: 100%; }
+button     { background: none; border: 0; cursor: pointer; color: inherit; font: inherit; }
+a          { color: inherit; text-decoration: none; }
+
+
+/* -------------------- 1. Tokens --------------------------- */
+:root {
+  --bg:            #000000;
+  --fg:            #ffffff;
+  --muted:         #cccccc;
+
+  --color-acento:  magenta;
+  --color-titulo:  red;
+
+  --font-serif:    'Times New Roman', Times, serif;
+
+  --ease-soft:     cubic-bezier(0.4, 0, 0.2, 1);
+
+  --h-header:      3.25rem;
+  --max-w:         720px;
+}
+
+* { font-family: var(--font-serif); }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
+  text-transform: lowercase;
+}
+
+
+/* -------------------- 2. Layout root --------------------- */
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 200ms var(--ease-soft);
+}
+.app.is-fading { opacity: 0; }
+
+
+/* -------------------- 3. Header ------------------------- */
+/* Header bounded igual que el main: max-width centrat. Ja no és sticky;
+   queda al principi del flow i scrollea amb la pàgina. */
+.header {
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  min-height: var(--h-header);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0;
+  background: var(--bg);
+}
+
+/* Switch d'idioma — un sol botó que mostra l'idioma "següent" */
+.lang__switch {
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: var(--color-acento);
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s var(--ease-soft);
+}
+.lang__switch:hover { border-bottom-color: var(--color-acento); }
+
+/* Braille a la dreta */
+.braille {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--color-titulo);
+  user-select: none;
+  cursor: default;
+  font-size: clamp(0.7rem, 2.2dvh, 1.05rem);
+}
+.braille-char {
+  display: inline-grid;
+  grid-template-columns: 0.32em 0.32em;
+  grid-template-rows: 0.32em 0.32em 0.32em;
+  gap: 0.18em;
+}
+.braille-dot {
+  width: 0.32em;
+  height: 0.32em;
+  border-radius: 50%;
+  background: currentColor;
+}
+.braille-dot[data-pos="1"] { grid-column: 1; grid-row: 1; }
+.braille-dot[data-pos="2"] { grid-column: 1; grid-row: 2; }
+.braille-dot[data-pos="3"] { grid-column: 1; grid-row: 3; }
+.braille-dot[data-pos="4"] { grid-column: 2; grid-row: 1; }
+.braille-dot[data-pos="5"] { grid-column: 2; grid-row: 2; }
+.braille-dot[data-pos="6"] { grid-column: 2; grid-row: 3; }
+.braille-space { width: 0.5em; }
+
+
+/* -------------------- 4. Home main ---------------------- */
+.home {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.home__main {
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+
+
+/* -------------------- 5. Llista vertical de projectes --- */
+.proyectos-nav__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.proyectos-nav__link {
+  display: inline-block;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  color: var(--color-acento);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s var(--ease-soft);
+}
+.proyectos-nav__link:hover {
+  border-bottom-color: var(--color-acento);
+}
+
+
+/* -------------------- 6. Seccions de projecte ----------- */
+.proyecto {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  /* petit marge en saltar a una àncora — el header ja no és sticky però
+     deixem aire perquè la secció no quedi pegada al top */
+  scroll-margin-top: 1rem;
+}
+
+/* "Eyebrow" — etiqueta petita amb el nom del projecte, marcador visual
+   de canvi de secció. Va sobre el primer grup; en projectes multi-grup
+   ajuda a saber que tots els grups pertanyen al mateix projecte. */
+.proyecto__eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.grupo { display: flex; flex-direction: column; gap: 1.25rem; }
+.grupo__titulo {
+  font-size: clamp(1.4rem, 3dvh, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-acento);
+}
+.grupo__parrafo {
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+
+/* -------------------- 7. Slideshow ---------------------- */
+.slideshow {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #111;
+  user-select: none;
+}
+.slideshow__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transform: translateX(calc(var(--i, 0) * -100%));
+  transition: transform 600ms var(--ease-soft);
+  will-change: transform;
+}
+.slideshow__slide {
+  flex: 0 0 100%;
+  height: 100%;
+}
+.slideshow__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slideshow__btn {
+  position: absolute;
+  top: 0;
+  width: 10%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--color-acento);
+  opacity: 0.35;
+  transition: opacity 0.2s var(--ease-soft);
+  background: linear-gradient(to right, rgba(0,0,0,0.6), transparent);
+}
+.slideshow__btn--prev { left: 0;  }
+.slideshow__btn--next { right: 0; background: linear-gradient(to left, rgba(0,0,0,0.6), transparent); }
+.slideshow__btn:hover           { opacity: 1; }
+.slideshow__btn[disabled]       { opacity: 0; pointer-events: none; }
+.slideshow:hover .slideshow__btn:not([disabled]) { opacity: 0.85; }
+
+
+/* -------------------- 8. Text desplegable ---------------- */
+.desplegable { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.desplegable__body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 500ms var(--ease-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.desplegable__body p { font-size: 1.05rem; line-height: 1.55; }
+
+.desplegable__toggle {
+  align-self: flex-start;
+  font-size: 0.95rem;
+  color: var(--color-acento);
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: border-color 0.2s var(--ease-soft);
+}
+.desplegable__toggle:hover { border-bottom-color: var(--color-acento); }
+
+
+/* -------------------- 9. Splash de benvinguda ----------- */
+/* Overlay full-screen amb una mirilla random centrada. El fons és
+   opac des del primer frame (sense fade-in) per no deixar veure la
+   home que es munta al darrere. La mirilla és una imatge circular
+   neta, sense contorn — l'animació de scale-in és l'únic detall. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 600ms var(--ease-soft);
+}
+.splash.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Mentre el splash està actiu, bloquegem scroll del body perquè
+   l'usuari no scrollegi la home que hi ha al darrere. */
+body.has-splash { overflow: hidden; }
+
+.splash__mirilla {
+  width: min(60vw, 60dvh, 360px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background-color: #111;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 0.3s var(--ease-soft),
+    opacity 600ms var(--ease-soft);
+  animation: splash-mirilla-in 800ms var(--ease-soft);
+}
+.splash__mirilla:hover,
+.splash__mirilla:focus-visible {
+  transform: scale(1.03);
+  outline: none;
+}
+.splash.is-leaving .splash__mirilla {
+  transform: scale(1.6);
+  opacity: 0;
+}
+
+@keyframes splash-mirilla-in {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+
+/* -------------------- 10. Reduced motion ----------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* -------------------- 11. Desktop tweaks ---------------- */
+@media (min-width: 900px) {
+  .home__main {
+    padding: 3rem 2rem 6rem;
+    gap: 8rem;
+  }
+  .proyecto { gap: 2.5rem; }
+}

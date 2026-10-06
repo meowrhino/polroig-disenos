@@ -1,0 +1,475 @@
+/* ============================================================
+   pol roig · style
+   mobile-first, minimal
+   ============================================================ */
+
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --accent: #f00;
+  --muted: #ccc;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* wheel / mirilla geometry (mobile) — capped by both width and height so
+     landscape phones don't get a wheel taller than the viewport */
+  --wheel-size: min(82vw, 62dvh, 360px);
+  --mirilla-size: 42%;
+  --item-radius-ratio: 0.9; /* multiplier of half the stage size */
+
+  /* pointer — equilateral triangle */
+  --pointer-base: 34px; /* base width; height = base * √3/2 */
+
+  --gap-block: 1.25rem;
+  --header-h: 3.25rem;
+
+  /* shared horizontal rhythm */
+  --pad-x: 1.25rem;
+  --max-w: 80rem;
+
+  /* mirilla cross-fade duration — JS reads this so swap timing stays in sync */
+  --mirilla-fade: 350ms;
+}
+
+/* -------- reset / base -------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--fg); }
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100svh;
+  overflow-x: hidden;
+  text-wrap: pretty;
+}
+a { color: inherit; text-decoration: none; }
+button {
+  font: inherit; color: inherit;
+  background: none; border: 0; padding: 0; margin: 0;
+  cursor: pointer;
+}
+
+/* keyboard focus ring — visible only for keyboard users */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+img { max-width: 100%; display: block; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+
+/* SPA views: [hidden] must beat display:flex/grid on .home / .proyecto */
+.view[hidden] { display: none !important; }
+
+/* -------- top bar -------- */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem var(--pad-x);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  position: relative;
+  z-index: 20;
+}
+.logo {
+  color: var(--accent);
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+.lang { position: relative; }
+.lang__toggle {
+  color: var(--accent);
+  font-size: 1rem;
+}
+.lang__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.35rem;
+  background: var(--bg);
+  padding: 0.25rem 0;
+  text-align: right;
+  min-width: 3rem;
+}
+.lang__menu[hidden] { display: none; }
+.lang__menu li a {
+  display: block;
+  padding: 0.2rem 0.4rem;
+  color: var(--accent);
+}
+.lang__menu li a[aria-current="true"] { opacity: 0.5; }
+
+/* ==============================================================
+   HOME
+   Wheel + instruct + pointer are absolutely positioned so that at
+   scroll=0 the wheel sits at the viewport's centre. project-info
+   sits right below the wheel (small gap, no wasted viewport).
+   Scrolling moves the whole column naturally.
+   ============================================================== */
+.home {
+  padding: 0 var(--pad-x) 1.5rem;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  position: relative;
+  min-height: calc(100dvh - var(--header-h));
+}
+
+/* instruct label, pinned just above the pointer */
+.instruct {
+  position: absolute;
+  top: calc(50dvh - var(--header-h) - var(--wheel-size) / 2 - var(--pointer-base) * 0.866 - 1.25rem);
+  left: 0;
+  right: 0;
+  padding: 0 var(--pad-x);
+  text-align: center;
+  font-size: 1rem;
+  transform: translateY(-100%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* equilateral triangle pointing down toward the wheel, pinned above it */
+.pointer {
+  width: 0;
+  height: 0;
+  border-left: calc(var(--pointer-base) / 2) solid transparent;
+  border-right: calc(var(--pointer-base) / 2) solid transparent;
+  border-top: calc(var(--pointer-base) * 0.866) solid var(--fg);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.18));
+  position: absolute;
+  top: calc(50dvh - var(--header-h) - var(--wheel-size) / 2 - 0.5rem);
+  left: 50%;
+  transform: translate(-50%, -100%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* -------- wheel stage — centred in the first viewport of .home -------- */
+.wheel-stage {
+  position: absolute;
+  top: calc(50dvh - var(--header-h));
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--wheel-size);
+  aspect-ratio: 1 / 1;
+  touch-action: none; /* critical for drag-to-rotate */
+  user-select: none;
+  cursor: grab;
+  z-index: 5;
+  --item-radius: calc(var(--wheel-size) / 2 * var(--item-radius-ratio));
+}
+.wheel-stage:has(.wheel.is-dragging) { cursor: grabbing; }
+
+/* the mirilla sits in the middle, does NOT rotate.
+   clickable: opens the active project. */
+.mirilla {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--mirilla-size);
+  height: var(--mirilla-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 2;
+  background: #111;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.04),
+    inset 0 0 30px rgba(0,0,0,0.9);
+  view-transition-name: mirilla;
+  cursor: pointer;
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.mirilla:hover {
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.18),
+    inset 0 0 30px rgba(0,0,0,0.7);
+}
+.mirilla__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity var(--mirilla-fade) var(--ease);
+}
+.mirilla__img.is-swapping { opacity: 0; }
+
+/* the wheel: absolute-positioned items around the mirilla */
+.wheel {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform: rotate(var(--rot, 0deg));
+  /* tiny overshoot on the final snap — feels like a real dial */
+  transition: transform 0.55s cubic-bezier(0.34, 1.22, 0.64, 1);
+  will-change: transform;
+}
+.wheel.is-dragging { transition: none; }
+
+.wheel__item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform:
+    translate(-50%, -50%)
+    rotate(calc(var(--i) * 45deg))
+    translate(0, calc(-1 * var(--item-radius)));
+  transform-origin: 50% 50%;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  color: var(--item-color, var(--fg));
+  opacity: 0.7;
+  transition: color 0.25s var(--ease), opacity 0.25s var(--ease);
+  text-align: center;
+  text-wrap: balance;
+  width: max-content;
+  max-width: 7rem;
+  line-height: 1.15;
+}
+.wheel__item[data-active="true"] {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* -------- project info block — sits just below the wheel (small gap) -------- */
+.project-info {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding-top: calc(50dvh + var(--wheel-size) / 2 + 1.25rem - var(--header-h));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+}
+.synopsis,
+.bio-frag {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.view-project {
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  letter-spacing: 0.01em;
+  transition: color 0.2s var(--ease);
+}
+.view-project::after {
+  content: " →";
+  display: inline-block;
+  transition: transform 0.2s var(--ease);
+}
+.view-project:hover::after { transform: translateX(3px); }
+.view-project:hover { color: var(--accent); }
+
+/* ==============================================================
+   PROYECTO PAGE
+   Content appears with a soft stagger when the view transition lands.
+   ============================================================== */
+@keyframes proyecto-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.proyecto__head,
+.proyecto__synopsis,
+.proyecto__text,
+.proyecto__creditos,
+.proyecto__back {
+  animation: proyecto-rise 0.5s var(--ease) both;
+}
+.proyecto__head      { animation-delay: 0.10s; }
+.proyecto__synopsis  { animation-delay: 0.22s; }
+.proyecto__text      { animation-delay: 0.30s; }
+.proyecto__creditos  { animation-delay: 0.38s; }
+.proyecto__back      { animation-delay: 0.55s; }
+
+/* gallery images fade/slide in as they enter the viewport */
+.proyecto__gallery img {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+}
+.proyecto__gallery img.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proyecto__head,
+  .proyecto__synopsis,
+  .proyecto__text,
+  .proyecto__creditos,
+  .proyecto__back,
+  .proyecto__gallery img {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.proyecto {
+  padding: 0 var(--pad-x) 3rem;
+  max-width: var(--max-w);
+  margin: 0 auto;
+}
+.proyecto__article {
+  max-width: 46rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.proyecto__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.proyecto__title {
+  font-size: 1.5rem;
+  font-weight: normal;
+  margin: 0;
+}
+.proyecto__sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.proyecto__mirilla {
+  width: 80%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0.5rem auto 1rem;
+  background: #111;
+  view-transition-name: mirilla;
+}
+.proyecto__synopsis {
+  font-style: italic;
+  color: var(--muted);
+}
+.proyecto__text {
+  line-height: 1.55;
+}
+.proyecto__creditos li {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.5rem;
+}
+.proyecto__creditos li::before {
+  content: "·";
+}
+.proyecto__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.proyecto__gallery img {
+  width: 100%;
+  height: auto;
+}
+.proyecto__back {
+  margin-top: 2rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  align-self: flex-start;
+  color: var(--accent);
+}
+
+/* ==============================================================
+   DESKTOP (>= 900px): per home_ordenador.png
+   bio to the left, wheel centred bigger, synopsis + link to the right
+   ============================================================== */
+@media (min-width: 900px) {
+  :root {
+    --wheel-size: min(60vmin, 620px);
+    --mirilla-size: 28%;
+    --pointer-base: 44px;
+    --pad-x: 2rem;
+  }
+
+  /* single-viewport layout: wheel centred, texts pinned to the bottom corners */
+  .home {
+    min-height: calc(100dvh - var(--header-h));
+    overflow: hidden;  /* nothing below the first viewport on desktop */
+    padding-bottom: 0;
+  }
+
+  /* project-info flattened so bio + synopsis + view-project pin independently */
+  .project-info {
+    display: contents;
+  }
+  .bio-frag {
+    position: absolute;
+    left: var(--pad-x);
+    bottom: 1.5rem;
+    max-width: 22rem;
+    font-size: 0.9rem;
+    padding: 0;
+  }
+  .synopsis {
+    position: absolute;
+    right: var(--pad-x);
+    bottom: calc(1.5rem + 2.5rem);  /* leaves room for view-project below */
+    max-width: 22rem;
+    font-size: 0.9rem;
+    text-align: right;
+    padding: 0;
+  }
+  .view-project {
+    position: absolute;
+    right: var(--pad-x);
+    bottom: 1.5rem;
+    text-align: right;
+  }
+
+  .proyecto__article {
+    max-width: 64rem;
+    margin: 0;
+  }
+}
+
+/* tiny helper */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ==============================================================
+   VIEW TRANSITIONS
+   Cross-fade between home ↔ project, with the mirilla morphing
+   continuously between its wheel-centre and project-header slots.
+   ============================================================== */
+@keyframes vt-fade-in  { from { opacity: 0 } }
+@keyframes vt-fade-out { to   { opacity: 0 } }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: var(--ease);
+}
+::view-transition-old(root) { animation-name: vt-fade-out; }
+::view-transition-new(root) { animation-name: vt-fade-in; }
+
+::view-transition-old(mirilla),
+::view-transition-new(mirilla) {
+  animation-duration: 520ms;
+  animation-timing-function: var(--ease);
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(mirilla),
+  ::view-transition-new(mirilla) {
+    animation-duration: 1ms;
+  }
+}
